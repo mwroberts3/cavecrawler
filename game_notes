@@ -1,0 +1,9 @@
+**Types of Powers**
+every three levels player gains a power-ups
+the power-ups are shown in a row, Mario 3 style and player can use the next one in the queue by pressing space
+  -Slow lasers (slows laser speed by 50%)
+  -super speed (increase super speed by )
+  -upgrade branches (all branches in the level are upgraded to gold level)
+
+**Extra Lives**
+every 10000 points, player gains an extra life

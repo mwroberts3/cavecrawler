@@ -148,10 +148,17 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+const branchColors = [
+  { color: 'gray', value: 1 },
+  { color: 'white', value: 2 },
+  { color: 'yellow', value: 3 },
+  { color: 'green', value: 4 },
+  { color: 'blue', value: 5 },
+  { color: 'purple', value: 6 }
+];
+
 function createBranches(segment, depth, index) {
   if (depth === 0) return;
-
-  const branchColors = ['gray', 'white', 'yellow'];
 
   let branchPosY = Math.random() * (canvas.height - caveHeight) + 100;
   let branchHeight = caveHeight * (branchMinSize + Math.random() * (branchMaxSize - branchMinSize));
@@ -159,7 +166,7 @@ function createBranches(segment, depth, index) {
   // Assign a random color
   let color = branchColors[Math.floor(Math.random() * branchColors.length)];
 
-  segment.branches.push({ posY: branchPosY, height: branchHeight, direction: direction, color: color });
+  segment.branches.push({ posY: branchPosY, height: branchHeight, direction, color: color.color, colorValue: color.value });
 
   if (index + 1 < caveSegments.length) {
     createBranches(caveSegments[index + 1], depth - 1, index + 1);
@@ -201,21 +208,38 @@ function handleLasers() {
             if (branch.direction === 1 && lasers[i].x + 30 >= segmentLeft && lasers[i].x <= segmentRight) {
               // Laser collided with the solid part of a rightward branch
               lasers.splice(i, 1);
-              console.log('HIT BRANCH!!')
               hitBranch = true;
+
+              // Decrease the branch's color value and change the color accordingly
+              branch.colorValue -= 1;
+              if (branch.colorValue <= 0) {
+                // Remove the branch if the value becomes 0
+                segment.branches.splice(k, 1);
+              } else {
+                branch.color = branchColors[branch.colorValue - 1].color;
+              }
+
               break;
             } else if (branch.direction === -1 && lasers[i].x + 30 >= segmentRight && lasers[i].x <= segmentLeft) {
               // Laser collided with the solid part of a leftward branch
               lasers.splice(i, 1);
-              console.log('HIT BRANCH!!')
               hitBranch = true;
+
+              // Decrease the branch's color value and change the color accordingly
+              branch.colorValue -= 1;
+              if (branch.colorValue <= 0) {
+                // Remove the branch if the value becomes 0
+                segment.branches.splice(k, 1);
+              } else {
+                branch.color = branchColors[branch.colorValue - 1].color;
+              }
+
               break;
             }
           }
         }
       }
     }
-
     // If the laser hit a branch, skip the remaining checks
     if (hitBranch) continue;
 

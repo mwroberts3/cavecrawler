@@ -9,21 +9,22 @@ playerImage.addEventListener('load', () => gameState.loaded = true);
 
 
 // Game variables
-const playerSpeed = 1;
-const gravity = 0.5;
+const playerSpeed = 2;
+const gravity = 0.25;
 let level = 0;
 let lives = 3;
+let score = 0;
 let player = {
   x: canvas.width / 2,
   y: 0,
   velocityX: 0,
   velocityY: 0,
-  onGround: false,
+  onGround: true,
   gravityReversed: false,
   direction: 1
 };
 let laserCooldown = 0;
-const laserSpeed = 1;
+const laserSpeed = 2.5;
 const lasers = [];
 
 // Cave generation variables
@@ -177,7 +178,7 @@ function handleLasers() {
   // Laser creation and movement
   if (laserCooldown <= 0) {
     let posY = Math.random() * (600);
-    lasers.push({ x: canvas.width, y: posY });
+    lasers.push({ x: 0, y: posY });
     // Adjust these numbers to control the frequency of the lasers
     laserCooldown = Math.max(60 + Math.floor(Math.random() * 100) - (level * 50), 20);
   } else {
@@ -186,7 +187,7 @@ function handleLasers() {
 
   // Update laser positions
   for (let i = 0; i < lasers.length; i++) {
-    lasers[i].x -= laserSpeed;
+    lasers[i].x += laserSpeed;
 
     // Check for collision with branches
     let hitBranch = false;
@@ -244,7 +245,7 @@ function handleLasers() {
     if (hitBranch) continue;
 
     // Remove laser if it goes off the screen
-    if (lasers[i].x < 0) {
+    if (lasers[i].x > canvas.width) {
       lasers.splice(i, 1);
       i--;
     }
@@ -257,7 +258,7 @@ function updatePlayerPosition() {
   player.y += player.velocityY;
 
   // clamp player position
-  player.x = Math.min(Math.max(player.x, 0), canvas.width);
+  // player.x = Math.min(Math.max(player.x, 0), canvas.width);
 
   // apply gravity
   if (player.gravityReversed) {
@@ -281,38 +282,12 @@ function updatePlayerPosition() {
     player.onGround = false;
   }
 
-  // check if spacebar is pressed
-  if ((keys['Space'] || keys[' ']) && player.onGround) {
-    spaceBarPressedDuration++;
-    if (spaceBarPressedDuration <= 10) {
-      jump(spaceBarPressedDuration / 2);
-    }
-  }
-
   // check if player reached RIGHT boundary
   if (player.x >= canvas.width - 5) {
     regenerateCave();
     player.x = 5;
     level++;
   }
-}
-
-function isPlayerInsideWalls() {
-  const groundY = getBottomCaveY(player.x) - 10;
-  const ceilingY = getTopCaveY(player.x) + 10;
-  const nextGroundY = getBottomCaveY(player.x + player.velocityX) - 10;
-  const nextCeilingY = getTopCaveY(player.x + player.velocityX) + 10;
-
-  if (player.gravityReversed) {
-    if (player.y <= ceilingY || player.y <= nextCeilingY) {
-      return true;
-    }
-  } else {
-    if (player.y >= groundY || player.y >= nextGroundY) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function regenerateCave() {
@@ -357,7 +332,10 @@ function draw() {
   ctx.fillStyle = 'brown';
   for (let i = 0; i < caveSegments.length; i++) {
     let posY = caveSegments[i].posY;
+    // shows top of cave
     ctx.fillRect(i * caveWidth, 0, caveWidth, posY);
+
+    // shows bottom of cave
     ctx.fillRect(i * caveWidth, posY + caveHeight, caveWidth, canvas.height - posY - caveHeight);
 
     // Draw branches
@@ -383,12 +361,15 @@ function draw() {
     ctx.fillRect(laser.x, laser.y, 30, 10);
   }
 
-  // Draw level counter and life count
-  ctx.fillStyle = 'black';
-  ctx.font = '24px Arial';
-  ctx.fillText(`Level: ${level}`, 50, 30);
-  ctx.fillText(`Lives: ${lives}`, 50, 60);
+  // Update player's level, lives and score
+  const playerHUD = document.querySelector('#playerHUD');
+  playerHUD.innerHTML = `
+      <p>Level: ${level}</p>
+      <p>Lives: ${lives}</p>
+      <p>Score: ${score}</p>
+    `;
 }
+
 
 function catmullRomSpline(p0, p1, p2, p3, t) {
   const t2 = t * t;
@@ -410,14 +391,12 @@ let spaceBarPressedDuration = 0;
 window.addEventListener('keydown', (event) => {
   if (!keys[event.key]) {
     keys[event.key] = true;
-    if (event.key === 'Space' || event.key === ' ') spaceBarPressedDuration = 0;
     updatePlayerVelocity();
   }
 });
 
 window.addEventListener('keyup', (event) => {
   keys[event.key] = false;
-  if (event.key === 'Space' || event.key === ' ') spaceBarPressedDuration = 0;
   updatePlayerVelocity();
 });
 
@@ -440,23 +419,6 @@ function updatePlayerVelocity() {
     player.y = getBottomCaveY(player.x) - 10;
   }
 
-  // Add this block to update the player's y position when moving left or right
-  if (keys['ArrowLeft'] || keys['a'] || keys['ArrowRight'] || keys['d']) {
-    let newY;
-    if (player.gravityReversed) {
-      newY = getTopCaveY(player.x) + 10;
-    } else {
-      newY = getBottomCaveY(player.x) - 10;
-    }
-
-    // Use lerp to smoothly transition the player's y position
-    player.y = lerp(player.y, newY, 0.1);
-  }
-
-
-  if ((keys['Space'] || keys[' ']) && player.onGround) {
-    jump();
-  }
   if (keys['ArrowUp']) {
     if (!player.gravityReversed && player.onGround) {
       player.gravityReversed = true;
@@ -471,24 +433,14 @@ function updatePlayerVelocity() {
   }
 }
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function jump(force = 5) {
-  if (player.gravityReversed) {
-    player.velocityY = force;
-  } else {
-    player.velocityY = -force;
-  }
-}
-
 // Get the y position of the bottom of the cave at a given x position
 function getBottomCaveY(x) {
   let segmentIndex = Math.floor(x / caveWidth);
   let segmentPosX = x % caveWidth;
   let posYStart = caveSegments[segmentIndex].posY + caveHeight;
   let posYEnd = caveSegments[segmentIndex + 1].posY + caveHeight;
+
+  console.log(caveSegments);
 
   const p0 = caveSegments[Math.max(segmentIndex - 1, 0)].posY;
   const p1 = posYStart;
@@ -501,6 +453,7 @@ function getBottomCaveY(x) {
 
 function getTopCaveY(x) {
   let segmentIndex = Math.floor(x / caveWidth);
+  console.log(x, segmentIndex, caveSegments)
   let segmentPosX = x % caveWidth;
   let posYStart = caveSegments[segmentIndex].posY;
   let posYEnd = caveSegments[segmentIndex + 1].posY;

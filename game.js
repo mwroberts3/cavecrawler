@@ -11,7 +11,6 @@ playerImage.addEventListener('load', () => gameState.loaded = true);
 // Game variables
 const playerSpeed = 2;
 const gravity = 0.25;
-let level = 0;
 let lives = 3;
 let score = 0;
 let player = {
@@ -26,6 +25,15 @@ let player = {
 let laserCooldown = 0;
 const laserSpeed = 2.5;
 const lasers = [];
+let level = 0;
+
+let levelColor = 'brown';
+
+const levelData = [
+  { levelChange: 0, color: 'brown' },
+  { levelChange: 5, color: 'white' },
+  { levelChange: 10, color: 'red' }
+];
 
 // Cave generation variables
 const caveWidth = 20;
@@ -284,9 +292,16 @@ function updatePlayerPosition() {
 
   // check if player reached RIGHT boundary
   if (player.x >= canvas.width - 5) {
-    regenerateCave();
     player.x = 5;
     level++;
+
+    for (let i = 0; i < levelData.length; i++) {
+      if (level >= levelData[i].levelChange) {
+        levelColor = levelData[i].color;
+      }
+    }
+
+    regenerateCave();
   }
 }
 
@@ -329,11 +344,14 @@ function draw() {
   }
 
   // Draw cave
-  ctx.fillStyle = 'brown';
+  ctx.fillStyle = levelColor;
   for (let i = 0; i < caveSegments.length; i++) {
     let posY = caveSegments[i].posY;
     // shows top of cave
-    ctx.fillRect(i * caveWidth, 0, caveWidth, posY);
+
+    if (level % 5 !== 0) {
+      ctx.fillRect(i * caveWidth, 0, caveWidth, posY);
+    }
 
     // shows bottom of cave
     ctx.fillRect(i * caveWidth, posY + caveHeight, caveWidth, canvas.height - posY - caveHeight);
@@ -351,7 +369,7 @@ function draw() {
         ctx.fillRect((i + 1) * caveWidth, branch.posY, -caveWidth, branch.height);
       }
     }
-    ctx.fillStyle = 'brown';
+    ctx.fillStyle = levelColor;
   }
 
   // Draw lasers
